@@ -38,25 +38,25 @@ public class PubSubModule {
 
     }
 
-    OnAWSEvents onAWSEvents;
+    private OnAWSEvents onAWSEvents;
 
     public PubSubModule(OnAWSEvents onAWSEvents, Context context) {
         this.onAWSEvents = onAWSEvents;
         this.mContext = context;
     }
 
-    static final String LOG_TAG = PubSubModule.class.getCanonicalName();
-    Context mContext;
+    final String LOG_TAG = PubSubModule.class.getCanonicalName();
+    private Context mContext;
 
-    AWSIotClient mIotAndroidClient;
-    AWSIotMqttManager mqttManager;
-    String clientId;
-    String keystorePath;
-    String keystoreName;
-    String keystorePassword;
+    private AWSIotClient mIotAndroidClient;
+    private AWSIotMqttManager mqttManager;
+    private String clientId;
+    private String keystorePath;
+    private String keystoreName;
+    private String keystorePassword;
 
-    KeyStore clientKeyStore = null;
-    String certificateId;
+    private KeyStore clientKeyStore = null;
+    private String certificateId;
 
     public void connectMqtt() {
         Log.d(LOG_TAG, "clientId = " + clientId);
@@ -96,7 +96,6 @@ public class PubSubModule {
                             } catch (UnsupportedEncodingException e) {
                                 e.printStackTrace();
                             }
-
                         }
                     });
         } catch (Exception e) {
@@ -113,11 +112,15 @@ public class PubSubModule {
     }
 
 
-    public void disconnectClick() {
+    public void disconnectConnection() {
         try {
-            mqttManager.disconnect();
+            boolean status = mqttManager.disconnect();
+            if (status) {
+                onAWSEvents.onClientConnected("Disconnected");
+            }
         } catch (Exception e) {
             Log.e(LOG_TAG, "Disconnect error.", e);
+            onAWSEvents.onClientConnected("Error");
         }
     }
 
@@ -143,13 +146,7 @@ public class PubSubModule {
         Region region = Region.getRegion(Utils.getMY_REGION());
         // MQTT Client
         mqttManager = new AWSIotMqttManager(clientId, Utils.getCUSTOMER_SPECIFIC_ENDPOINT());
-
-        // Set keepalive to 10 seconds.  Will recognize disconnects more quickly but will also send
-        // MQTT pings every 10 seconds.
         mqttManager.setKeepAlive(10);
-
-        // Set Last Will and Testament for MQTT.  On an unclean disconnect (loss of connection)
-        // AWS IoT will publish this message to alert other clients.
         AWSIotMqttLastWillAndTestament lwt = new AWSIotMqttLastWillAndTestament("my/lwt/topic",
                 "Android client lost connection", AWSIotMqttQos.QOS0);
         mqttManager.setMqttLastWillAndTestament(lwt);
@@ -187,14 +184,10 @@ public class PubSubModule {
 
         if (clientKeyStore == null) {
             Log.i(LOG_TAG, "Cert/key was not found in keystore - creating new key and certificate.");
-
             new Thread(new Runnable() {
                 @Override
                 public void run() {
                     try {
-                        // Create a new private key and certificate. This call
-                        // creates both on the server and returns them to the
-                        // device.
                         CreateKeysAndCertificateRequest createKeysAndCertificateRequest =
                                 new CreateKeysAndCertificateRequest();
                         createKeysAndCertificateRequest.setSetAsActive(true);
@@ -205,24 +198,13 @@ public class PubSubModule {
                                 "Cert ID: " +
                                         createKeysAndCertificateResult.getCertificateId() +
                                         " created.");
-
-                        // store in keystore for use in MQTT client
-                        // saved as alias "default" so a new certificate isn't
-                        // generated each run of this application
                         AWSIotKeystoreHelper.saveCertificateAndPrivateKey(certificateId,
                                 createKeysAndCertificateResult.getCertificatePem(),
                                 createKeysAndCertificateResult.getKeyPair().getPrivateKey(),
                                 keystorePath, keystoreName, keystorePassword);
 
-                        // load keystore from file into memory to pass on
-                        // connection
                         clientKeyStore = AWSIotKeystoreHelper.getIotKeystore(certificateId,
                                 keystorePath, keystoreName, keystorePassword);
-
-                        // Attach a policy to the newly created certificate.
-                        // This flow assumes the policy was already created in
-                        // AWS IoT and we are now just attaching it to the
-                        // certificate.
                         AttachPrincipalPolicyRequest policyAttachRequest =
                                 new AttachPrincipalPolicyRequest();
                         policyAttachRequest.setPolicyName(Utils.getAWS_IOT_POLICY_NAME());

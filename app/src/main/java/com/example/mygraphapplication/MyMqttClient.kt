@@ -50,12 +50,12 @@ class MyMqttClient(var mContext: Context, var mCallback: onMqttConnection) {
             val token = client?.connect(options)
             token?.actionCallback = object : IMqttActionListener {
                 override fun onSuccess(asyncActionToken: IMqttToken) {
-                    subsribeMessage(accelerometerTopic)
-                    subsribeMessage(lightTopic)
-                    subsribeMessage(tempretureTopic)
-                    subsribeMessage(humidityTopic)
-                    subsribeMessage(pressureTopic)
-                    subsribeMessage(healthTopic)
+                    /* subsribeMessage(accelerometerTopic)
+                     subsribeMessage(lightTopic)
+                     subsribeMessage(tempretureTopic)
+                     subsribeMessage(humidityTopic)
+                     subsribeMessage(pressureTopic)
+                     subsribeMessage(healthTopic)*/
                 }
 
                 override fun onFailure(asyncActionToken: IMqttToken, exception: Throwable) {

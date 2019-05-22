@@ -1,6 +1,13 @@
 package com.example.mygraphapplication
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.support.v4.app.NotificationCompat
+import android.support.v4.app.NotificationManagerCompat
 import android.support.v7.app.AppCompatActivity
 import android.view.Menu
 import android.view.View
@@ -28,7 +35,10 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, View.O
     }
 
     override fun onMessageReceived(message: String?) {
-        runOnUiThread { Toast.makeText(this, "Message " + message, Toast.LENGTH_LONG).show() }
+        runOnUiThread {
+            subscribeAllTopics()
+            // Toast.makeText(this, "Message " + message, Toast.LENGTH_LONG).show()
+        }
 
     }
 
@@ -77,6 +87,10 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, View.O
                 pubSubActivity?.connectMqtt()
                 return true
             }
+            R.id.action_disconnect -> {
+                pubSubActivity?.disconnectConnection()
+                return true
+            }
             else -> return super.onOptionsItemSelected(item)
         }
     }
@@ -86,6 +100,7 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, View.O
         //aws
         pubSubActivity = PubSubModule(this, this)
         pubSubActivity?.inception()
+        Handler().postDelayed({ pubSubActivity?.connectMqtt() }, 1000)
     }
 
     private fun initCharts() {
@@ -184,4 +199,55 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, View.O
             stopHumidity -> mqttClient?.unsubscribeMessage(MyMqttClient.humidityTopic)
         }
     }
+
+    fun subscribeAllTopics() {
+        mqttClient?.subsribeMessage(MyMqttClient.lightTopic)
+        mqttClient?.subsribeMessage(MyMqttClient.tempretureTopic)
+        mqttClient?.subsribeMessage(MyMqttClient.vibrationTopic)
+        mqttClient?.subsribeMessage(MyMqttClient.humidityTopic)
+
+        createNotification()
+    }
+
+    fun unsubscribeAllTopics() {
+        mqttClient?.unsubscribeMessage(MyMqttClient.lightTopic)
+        mqttClient?.unsubscribeMessage(MyMqttClient.tempretureTopic)
+        mqttClient?.unsubscribeMessage(MyMqttClient.vibrationTopic)
+        mqttClient?.unsubscribeMessage(MyMqttClient.humidityTopic)
+    }
+
+
+    fun createNotification() {
+        createNotificationChannel()
+        var builder = NotificationCompat.Builder(this, "12345")
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setBadgeIconType(R.mipmap.ic_launcher)
+            .setContentTitle("Nissan")
+            .setContentText("Bosch")
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("Health checkup warning")
+            )
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+        with(NotificationManagerCompat.from(this)) {
+            notify(123, builder.build())
+        }
+    }
+
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "Nissan"
+            val descriptionText = "Bosch"
+            val importance = NotificationManager.IMPORTANCE_HIGH
+            val channel = NotificationChannel("12345", name, importance).apply {
+                description = descriptionText
+            }
+            // Register the channel with the system
+            val notificationManager: NotificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
 }
