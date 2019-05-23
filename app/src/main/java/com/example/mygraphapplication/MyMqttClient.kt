@@ -5,6 +5,10 @@ import android.util.Log
 import android.widget.Toast
 import org.eclipse.paho.android.service.MqttAndroidClient
 import org.eclipse.paho.client.mqttv3.*
+import kotlin.math.absoluteValue
+import org.eclipse.paho.client.mqttv3.IMqttToken
+import org.eclipse.paho.client.mqttv3.IMqttActionListener
+
 
 class MyMqttClient(var mContext: Context, var mCallback: onMqttConnection) {
 
@@ -37,6 +41,30 @@ class MyMqttClient(var mContext: Context, var mCallback: onMqttConnection) {
         client()
     }
 
+    fun mqttDisconnect() {
+        try {
+            var disconToken = client?.disconnect()
+            if (disconToken == null)
+                return
+            disconToken?.actionCallback = object : IMqttActionListener {
+                override fun onSuccess(asyncActionToken: IMqttToken) {
+                    // we are now successfully disconnected
+                    callback == null
+                }
+
+                override fun onFailure(
+                    asyncActionToken: IMqttToken,
+                    exception: Throwable
+                ) {
+                    // something went wrong, but probably we are disconnected anyway
+                }
+            }
+        } catch (e: MqttException) {
+
+        }
+
+    }
+
     fun client() {
         val clientId = MqttClient.generateClientId()
         client = MqttAndroidClient(
@@ -50,12 +78,12 @@ class MyMqttClient(var mContext: Context, var mCallback: onMqttConnection) {
             val token = client?.connect(options)
             token?.actionCallback = object : IMqttActionListener {
                 override fun onSuccess(asyncActionToken: IMqttToken) {
-                    /* subsribeMessage(accelerometerTopic)
-                     subsribeMessage(lightTopic)
-                     subsribeMessage(tempretureTopic)
-                     subsribeMessage(humidityTopic)
-                     subsribeMessage(pressureTopic)
-                     subsribeMessage(healthTopic)*/
+                    subsribeMessage(accelerometerTopic)
+                    subsribeMessage(lightTopic)
+                    subsribeMessage(tempretureTopic)
+                    subsribeMessage(humidityTopic)
+                    subsribeMessage(pressureTopic)
+                    subsribeMessage(healthTopic)
                 }
 
                 override fun onFailure(asyncActionToken: IMqttToken, exception: Throwable) {
@@ -71,6 +99,14 @@ class MyMqttClient(var mContext: Context, var mCallback: onMqttConnection) {
     private fun publish(topic: String, payload: String) {
         val message = MqttMessage(payload.toByteArray())
         client?.publish(topic, message)
+    }
+
+    fun subscribeAllTopics() {
+        subsribeMessage(lightTopic)
+        subsribeMessage(tempretureTopic)
+        subsribeMessage(vibrationTopic)
+        subsribeMessage(humidityTopic)
+
     }
 
     fun subsribeMessage(topic: String) {
@@ -133,13 +169,13 @@ class MyMqttClient(var mContext: Context, var mCallback: onMqttConnection) {
 
         @Throws(Exception::class)
         override fun messageArrived(topic: String, mqttMessage: MqttMessage) {
-            //Log.d(TAG, topic + "---" + mqttMessage.toString())
+
             when (topic) {
-                tempretureTopic -> mCallback.onTempDataReceived(mqttMessage.toString().toInt() / 1000)
-                humidityTopic -> mCallback.onHumidityDataReceived(mqttMessage.toString().toInt())
-                lightTopic -> mCallback.onLightReceived(mqttMessage.toString().toInt() / 1000)
-                accelerometerTopic -> mCallback.onAccelerometerTopicDataReceived(mqttMessage.toString().toInt() / 100)
-                pressureTopic -> mCallback.onPressureTopicDataReceived(mqttMessage.toString().toInt() / 100)
+                tempretureTopic -> callback?.onTempDataReceived(mqttMessage.toString().toFloat().absoluteValue.toInt())
+                humidityTopic -> callback?.onHumidityDataReceived(mqttMessage.toString().toInt())
+                accelerometerTopic -> callback?.onAccelerometerTopicDataReceived(mqttMessage.toString().toInt())
+                pressureTopic -> callback?.onPressureTopicDataReceived(mqttMessage.toString().toInt())
+                healthTopic -> callback?.onHealthDataReceived(mqttMessage.toString().toInt())
             }
 
         }

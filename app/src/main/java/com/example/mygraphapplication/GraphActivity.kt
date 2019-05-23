@@ -9,23 +9,34 @@ import android.os.Handler
 import android.support.v4.app.NotificationCompat
 import android.support.v4.app.NotificationManagerCompat
 import android.support.v7.app.AppCompatActivity
+import android.util.Log
 import android.view.Menu
-import android.view.View
 import android.widget.Toast
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet
 import kotlinx.android.synthetic.main.activity_main.*
 import android.view.MenuItem
+import com.example.mygraphapplication.Utils.Companion.LIMIT_MAX_ACCELEROMETER
 import com.example.mygraphapplication.Utils.Companion.LIMIT_MAX_HEALTH
 import com.example.mygraphapplication.Utils.Companion.LIMIT_MAX_HUMIDITY
+import com.example.mygraphapplication.Utils.Companion.LIMIT_MAX_TEMP
+import com.example.mygraphapplication.Utils.Companion.LIMIT_MIN_ACCELEROMETER
+import com.example.mygraphapplication.Utils.Companion.LIMIT_MIN_TEMP
+import com.example.mygraphapplication.Utils.Companion.TOTAL_ACCELEROMETER_RANGE
 import com.example.mygraphapplication.Utils.Companion.TOTAL_HEALTH_RANGE
 import com.example.mygraphapplication.Utils.Companion.TOTAL_HUMIDITY_RANGE
+import com.example.mygraphapplication.Utils.Companion.TOTAL_TEMP_RANGE
 import com.example.mygraphapplication.Utils.Companion.X_AIXIS_VISIBLE_MAX_VALUE
+import com.example.mygraphapplication.Utils.Companion.alertPayload
+import com.example.mygraphapplication.Utils.Companion.launchPayload
+import com.example.mygraphapplication.Utils.Companion.lowPayload
+import com.example.mygraphapplication.Utils.Companion.notificationPayload
+import com.example.mygraphapplication.Utils.Companion.stopAlert
+import java.lang.Exception
 
 
-class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, View.OnClickListener,
-    PubSubModule.OnAWSEvents {
+class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, PubSubModule.OnAWSEvents {
 
     override fun onClientConnected(status: String) {
         runOnUiThread {
@@ -36,10 +47,28 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, View.O
 
     override fun onMessageReceived(message: String?) {
         runOnUiThread {
-            subscribeAllTopics()
-            // Toast.makeText(this, "Message " + message, Toast.LENGTH_LONG).show()
-        }
+            if (message!!.equals(alertPayload, true)) {
+                utils?.playAlertAlarm(this)
+            }
 
+            if (message!!.equals(lowPayload, true)) {
+                utils?.playInfoAlarm(this)
+            }
+
+            if (message!!.equals(notificationPayload, true)) {
+                createNotification("Alert notification", 123)
+            }
+
+            if (message!!.equals(launchPayload, true)) {
+                subscribeAllTopics()
+            }
+            if (message!!.equals(stopAlert, true)) {
+                utils?.stopMediaPlayer(this)
+            }
+
+
+            //  Toast.makeText(this, "Message " + message + "--" + utils, Toast.LENGTH_LONG).show()
+        }
     }
 
     override fun onSubscribe() {
@@ -47,7 +76,7 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, View.O
 
     }
 
-    private var mChart: LineChart? = null
+    private var mHealthChart: LineChart? = null
     private var mTempChart: LineChart? = null
     private var mHumidityChart: LineChart? = null
     private var mVibrationChart: LineChart? = null
@@ -61,14 +90,14 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, View.O
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        mChart = findViewById<LineChart>(R.id.health)
+        mHealthChart = findViewById<LineChart>(R.id.health)
         mVibrationChart = findViewById(R.id.vibration)
         mTempChart = findViewById(R.id.temperature)
         mHumidityChart = findViewById(R.id.humidity)
 
+        utils = Utils()
         chartUtils = ChartUtils()
         initMqttClient()
-        setButtonClickListener()
         initCharts()
     }
 
@@ -83,12 +112,25 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, View.O
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
         // Handle item selection
         when (item?.getItemId()) {
-            R.id.action_settings -> {
+            R.id.action_settings_connect -> {
+                initMqttClient()
+                Handler().postDelayed({
+                    mqttClient?.subscribeAllTopics()
+                }, 2000)
+
+                return true
+            }
+            R.id.action_alexa_connect -> {
                 pubSubActivity?.connectMqtt()
                 return true
             }
             R.id.action_disconnect -> {
-                pubSubActivity?.disconnectConnection()
+                /*try {
+                    mqttClient?.mqttDisconnect()
+                    pubSubActivity?.disconnectConnection()
+                } catch (e: Exception) {
+                }*/
+
                 return true
             }
             else -> return super.onOptionsItemSelected(item)
@@ -100,36 +142,29 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, View.O
         //aws
         pubSubActivity = PubSubModule(this, this)
         pubSubActivity?.inception()
-        Handler().postDelayed({ pubSubActivity?.connectMqtt() }, 1000)
+        Handler().postDelayed({ pubSubActivity?.connectMqtt() }, 2000)
     }
 
     private fun initCharts() {
-        mChart?.let {
+        mHealthChart?.let {
+            it.setBorderColor(resources.getColor(R.color.grayColor))
             chartUtils?.chartInception(it, LIMIT_MAX_HEALTH, TOTAL_HEALTH_RANGE)
         }
 
         mVibrationChart?.let {
-            chartUtils?.chartInception(it, LIMIT_MAX_HEALTH, TOTAL_HEALTH_RANGE)
+            it.setBorderColor(resources.getColor(R.color.grayColor))
+            chartUtils?.chartInception(it, LIMIT_MAX_ACCELEROMETER, TOTAL_ACCELEROMETER_RANGE, LIMIT_MIN_ACCELEROMETER)
         }
 
         mTempChart?.let {
-            chartUtils?.chartInception(it, LIMIT_MAX_HEALTH, TOTAL_HEALTH_RANGE)
+            it.setBorderColor(resources.getColor(R.color.grayColor))
+            chartUtils?.chartInception(it, LIMIT_MAX_TEMP, TOTAL_TEMP_RANGE, LIMIT_MIN_TEMP)
         }
 
         mHumidityChart?.let {
+            it.setBorderColor(resources.getColor(R.color.grayColor))
             chartUtils?.chartInception(it, LIMIT_MAX_HUMIDITY, TOTAL_HUMIDITY_RANGE)
         }
-    }
-
-    fun setButtonClickListener() {
-        startHealth.setOnClickListener(this)
-        stopHealth.setOnClickListener(this)
-        startTemperature.setOnClickListener(this)
-        stopTemperature.setOnClickListener(this)
-        startVibration.setOnClickListener(this)
-        stopvVbration.setOnClickListener(this)
-        startHumidity.setOnClickListener(this)
-        stopHumidity.setOnClickListener(this)
     }
 
     private fun addEntry(lineChart: LineChart?, value: Float, type: Utils.ChartType = Utils.ChartType.TEMPERATURE) {
@@ -164,6 +199,7 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, View.O
     }
 
     override fun onTempDataReceived(value: Int) {
+        Log.d(MyMqttClient.TAG, "Temp data " + value)
         addEntry(mTempChart, value.toFloat())
     }
 
@@ -172,32 +208,25 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, View.O
     }
 
     override fun onLightReceived(value: Int) {
-        addEntry(mChart, value.toFloat(), Utils.ChartType.HEALTH)
+        //addEntry(mHealthChart, value.toFloat(), Utils.ChartType.HEALTH)
     }
 
     override fun onHealthDataReceived(value: Int) {
+        if (value > 2) {
+            mHealthChart?.setBorderColor(resources.getColor(R.color.redColor))
+            createNotification("Health Alert notification", 345)
+        } else {
+            mHealthChart?.setBorderColor(resources.getColor(R.color.greenColor))
+        }
+        addEntry(mHealthChart, value.toFloat(), Utils.ChartType.HEALTH)
     }
 
     override fun onAccelerometerTopicDataReceived(value: Int) {
-
+        addEntry(mVibrationChart, value.toFloat(), Utils.ChartType.ACCELEROMETER)
     }
 
     override fun onPressureTopicDataReceived(value: Int) {
-        addEntry(mVibrationChart, value.toFloat(), Utils.ChartType.PRESSURE)
-    }
 
-
-    override fun onClick(p0: View?) {
-        when (p0) {
-            startHealth -> mqttClient?.subsribeMessage(MyMqttClient.lightTopic)
-            stopHealth -> mqttClient?.unsubscribeMessage(MyMqttClient.lightTopic)
-            startTemperature -> mqttClient?.subsribeMessage(MyMqttClient.tempretureTopic)
-            stopTemperature -> mqttClient?.unsubscribeMessage(MyMqttClient.tempretureTopic)
-            startVibration -> mqttClient?.subsribeMessage(MyMqttClient.vibrationTopic)
-            stopvVbration -> mqttClient?.unsubscribeMessage(MyMqttClient.vibrationTopic)
-            startHumidity -> mqttClient?.subsribeMessage(MyMqttClient.humidityTopic)
-            stopHumidity -> mqttClient?.unsubscribeMessage(MyMqttClient.humidityTopic)
-        }
     }
 
     fun subscribeAllTopics() {
@@ -205,8 +234,6 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, View.O
         mqttClient?.subsribeMessage(MyMqttClient.tempretureTopic)
         mqttClient?.subsribeMessage(MyMqttClient.vibrationTopic)
         mqttClient?.subsribeMessage(MyMqttClient.humidityTopic)
-
-        createNotification()
     }
 
     fun unsubscribeAllTopics() {
@@ -217,7 +244,7 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, View.O
     }
 
 
-    fun createNotification() {
+    fun createNotification(message: String?, notificationId: Int?) {
         createNotificationChannel()
         var builder = NotificationCompat.Builder(this, "12345")
             .setSmallIcon(R.mipmap.ic_launcher)
@@ -226,11 +253,11 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, View.O
             .setContentText("Bosch")
             .setStyle(
                 NotificationCompat.BigTextStyle()
-                    .bigText("Health checkup warning")
+                    .bigText(message)
             )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
         with(NotificationManagerCompat.from(this)) {
-            notify(123, builder.build())
+            notify(notificationId!!, builder.build())
         }
     }
 

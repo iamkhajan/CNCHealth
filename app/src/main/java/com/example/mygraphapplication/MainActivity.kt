@@ -69,10 +69,6 @@ class MainActivity : AppCompatActivity(), SensorEventListener, MyMqttClient.onMq
         initChart(mVibrationChart!!)
         initChart(mTempChart!!)
         initChart(mHumidityChart!!)
-        alert_button.setOnClickListener {
-            print("play sound here")
-            playMedia()
-        }
         feedMultiple()
 
     }

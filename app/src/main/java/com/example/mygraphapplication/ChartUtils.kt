@@ -12,6 +12,8 @@ class ChartUtils {
 
 
     fun chartInception(lineChart: LineChart, upperLimit: Float, maxValue: Float, lowerLimit: Float = 0f) {
+        lineChart.setDrawBorders(true)
+        lineChart.setBorderWidth(2f)
         setupChart(lineChart)
         setupAxes(lineChart, upperLimit, maxValue, lowerLimit)
         setupData(lineChart)
@@ -58,7 +60,7 @@ class ChartUtils {
         ll.textColor = Color.BLACK
         // reset all limit lines to avoid overlapping lines
         leftAxis.removeAllLimitLines()
-        leftAxis.addLimitLine(ll)
+        // leftAxis.addLimitLine(ll)
         // limit lines are drawn behind data (and not on top)
         leftAxis.setDrawLimitLinesBehindData(true)
     }
@@ -76,7 +78,7 @@ class ChartUtils {
         val l = lineChart.legend
 
         // modify the legend ...
-        l.form = Legend.LegendForm.CIRCLE
+        l.form = Legend.LegendForm.NONE
         l.textColor = Color.BLACK
     }
 
@@ -86,12 +88,11 @@ class ChartUtils {
         set.color = Color.BLUE
         set.setCircleColor(Color.BLUE)
         set.lineWidth = 2f
-        set.circleRadius = 4f
-        set.valueTextColor = Color.BLACK
-        set.valueTextSize = 10f
+        //set.circleRadius = 3f
+        set.valueTextColor = Color.WHITE
+        set.valueTextSize = 0f
         // To show values of each point
         set.setDrawValues(true)
-
         return set
     }
 }

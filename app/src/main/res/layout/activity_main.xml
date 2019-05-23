@@ -2,7 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
                 xmlns:tools="http://schemas.android.com/tools"
                 android:layout_width="match_parent"
-                android:background="#DCDCDC"
+                android:background="@color/grayColor"
                 android:layout_height="match_parent"
                 tools:context="com.example.mygraphapplication.MainActivity">
 
@@ -12,6 +12,7 @@
             android:layout_height="wrap_content"
             android:layout_margin="10dp"
             android:text="Not connected"
+            android:visibility="gone"
             android:background="@android:color/white"
             android:textColor="@android:color/black"
             android:gravity="center"
@@ -20,11 +21,13 @@
     <ScrollView android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@+id/status_text"
-                android:layout_marginBottom="0dp">
+                android:background="#DCDCDC"
+                android:layout_marginBottom="10dp">
 
 
         <LinearLayout android:layout_width="match_parent"
                       android:layout_height="wrap_content"
+                      android:layout_margin="10dp"
                       android:orientation="vertical">
 
             <android.support.v7.widget.CardView
@@ -44,7 +47,7 @@
                             android:id="@+id/health"
                             android:layout_width="match_parent"
                             android:layout_marginBottom="10dp"
-                            android:layout_height="400dp"/>
+                            android:layout_height="@dimen/graph_height"/>
 
                     <ImageButton android:id="@+id/startHealth"
                                  android:layout_width="wrap_content"
@@ -67,6 +70,8 @@
                     <TextView android:layout_width="match_parent"
                               android:layout_height="match_parent"
                               android:text="Health"
+                              android:textColor="@color/colorAccent"
+                              android:layout_marginBottom="10dp"
                               android:layout_alignBaseline="@+id/startHealth"
                               android:layout_below="@+id/health"
                               android:gravity="center|center_vertical"/>
@@ -93,7 +98,7 @@
                             android:id="@+id/temperature"
                             android:layout_width="match_parent"
                             android:layout_marginBottom="10dp"
-                            android:layout_height="400dp"/>
+                            android:layout_height="@dimen/graph_height"/>
 
                     <ImageButton android:id="@+id/startTemperature"
                                  style="@style/ButtonTheme"
@@ -117,6 +122,8 @@
                               android:layout_height="match_parent"
                               android:text="Temperature"
                               android:layout_alignBaseline="@+id/stopTemperature"
+                              android:textColor="@color/colorAccent"
+                              android:layout_marginBottom="10dp"
                               android:layout_below="@+id/temperature"
                               android:gravity="center|center_vertical"/>
 
@@ -142,7 +149,7 @@
                             android:id="@+id/vibration"
                             android:layout_width="match_parent"
                             android:layout_marginBottom="10dp"
-                            android:layout_height="400dp"/>
+                            android:layout_height="@dimen/graph_height"/>
 
                     <ImageButton android:id="@+id/startVibration"
                                  android:layout_width="wrap_content"
@@ -165,6 +172,8 @@
                     <TextView android:layout_width="match_parent"
                               android:layout_height="match_parent"
                               android:text="Vibration"
+                              android:textColor="@color/colorAccent"
+                              android:layout_marginBottom="10dp"
                               android:layout_alignBaseline="@+id/stopvVbration"
                               android:layout_below="@+id/vibration"
                               android:gravity="center|center_vertical"/>
@@ -190,7 +199,7 @@
                             android:id="@+id/humidity"
                             android:layout_width="match_parent"
                             android:layout_marginBottom="10dp"
-                            android:layout_height="400dp"/>
+                            android:layout_height="@dimen/graph_height"/>
 
                     <ImageButton android:id="@+id/startHumidity"
                                  android:layout_width="wrap_content"
@@ -213,6 +222,8 @@
                     <TextView android:layout_width="match_parent"
                               android:layout_height="match_parent"
                               android:text="Humidity"
+                              android:textColor="@color/colorAccent"
+                              android:layout_marginBottom="10dp"
                               android:layout_below="@+id/humidity"
                               android:gravity="center|center_vertical"/>
 
@@ -223,14 +234,5 @@
         </LinearLayout>
 
     </ScrollView>
-
-
-    <Button android:layout_width="match_parent"
-            android:id="@+id/alert_button"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            android:background="@android:color/white"
-            android:layout_alignParentBottom="true"
-            android:text="Alert"/>
 
 </RelativeLayout>

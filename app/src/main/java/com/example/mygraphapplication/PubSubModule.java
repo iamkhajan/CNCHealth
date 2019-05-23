@@ -39,6 +39,7 @@ public class PubSubModule {
     }
 
     private OnAWSEvents onAWSEvents;
+    public String awsTopicName = "nissan/demo/AlexaDashboard";
 
     public PubSubModule(OnAWSEvents onAWSEvents, Context context) {
         this.onAWSEvents = onAWSEvents;
@@ -68,7 +69,7 @@ public class PubSubModule {
                                             final Throwable throwable) {
                     Log.d(LOG_TAG, "Status = " + String.valueOf(status));
                     onAWSEvents.onClientConnected(status.toString());
-                    subscribeTopic("MyComputer");
+                    subscribeTopic(awsTopicName);
                 }
             });
         } catch (final Exception e) {
