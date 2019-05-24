@@ -149,7 +149,7 @@ public class PubSubActivity extends AppCompatActivity {
         btnConnect = findViewById(R.id.btnConnect);
         btnConnect.setEnabled(false);
 
-        // MQTT client IDs are required to be unique per AWS IoT account.
+        // MQTT connectMqttclient IDs are required to be unique per AWS IoT account.
         // This UUID is "practically unique" but does not _guarantee_
         // uniqueness.
         clientId = UUID.randomUUID().toString();
@@ -182,7 +182,7 @@ public class PubSubActivity extends AppCompatActivity {
         // Set Last Will and Testament for MQTT.  On an unclean disconnect (loss of connection)
         // AWS IoT will publish this message to alert other clients.
         AWSIotMqttLastWillAndTestament lwt = new AWSIotMqttLastWillAndTestament("my/lwt/topic",
-                "Android client lost connection", AWSIotMqttQos.QOS0);
+                "Android connectMqttclient lost connection", AWSIotMqttQos.QOS0);
         mqttManager.setMqttLastWillAndTestament(lwt);
 
         // IoT Client (for creation of certificate if needed)
@@ -243,7 +243,7 @@ public class PubSubActivity extends AppCompatActivity {
                                         createKeysAndCertificateResult.getCertificateId() +
                                         " created.");
 
-                        // store in keystore for use in MQTT client
+                        // store in keystore for use in MQTT connectMqttclient
                         // saved as alias "default" so a new certificate isn't
                         // generated each run of this application
                         AWSIotKeystoreHelper.saveCertificateAndPrivateKey(certificateId,

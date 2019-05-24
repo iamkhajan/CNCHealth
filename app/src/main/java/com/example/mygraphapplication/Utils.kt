@@ -45,7 +45,7 @@ class Utils {
         //max and limit for accelerometer
         val TOTAL_ACCELEROMETER_RANGE = 9000.0f
         val LIMIT_MAX_ACCELEROMETER = 4000.0f
-        val LIMIT_MIN_ACCELEROMETER = 800f
+        val LIMIT_MIN_ACCELEROMETER = 500f
 
         //max and limit for temperature
         val TOTAL_TEMP_RANGE = 80.0f

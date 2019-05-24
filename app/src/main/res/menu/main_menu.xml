@@ -4,7 +4,7 @@
     <item
             android:id="@+id/action_settings_connect"
             app:showAsAction="never"
-            android:title="Connect">
+            android:title="Subscribe">
     </item>
 
     <item
@@ -16,6 +16,6 @@
     <item
             android:id="@+id/action_disconnect"
             app:showAsAction="never"
-            android:title="Disconnect">
+            android:title="Unsubscribe">
     </item>
 </menu>

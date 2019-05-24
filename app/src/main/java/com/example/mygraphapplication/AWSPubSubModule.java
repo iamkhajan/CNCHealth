@@ -2,11 +2,7 @@ package com.example.mygraphapplication;
 
 import android.content.Context;
 import android.util.Log;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.TextView;
 
-import android.widget.Toast;
 import com.amazonaws.mobile.client.AWSMobileClient;
 import com.amazonaws.mobile.client.Callback;
 import com.amazonaws.mobile.client.UserStateDetails;
@@ -17,7 +13,6 @@ import com.amazonaws.mobileconnectors.iot.AWSIotMqttManager;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttNewMessageCallback;
 import com.amazonaws.mobileconnectors.iot.AWSIotMqttQos;
 import com.amazonaws.regions.Region;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.iot.AWSIotClient;
 import com.amazonaws.services.iot.model.AttachPrincipalPolicyRequest;
 import com.amazonaws.services.iot.model.CreateKeysAndCertificateRequest;
@@ -27,7 +22,7 @@ import java.io.UnsupportedEncodingException;
 import java.security.KeyStore;
 import java.util.UUID;
 
-public class PubSubModule {
+public class AWSPubSubModule {
 
     interface OnAWSEvents {
         void onClientConnected(String status);
@@ -41,12 +36,12 @@ public class PubSubModule {
     private OnAWSEvents onAWSEvents;
     public String awsTopicName = "nissan/demo/AlexaDashboard";
 
-    public PubSubModule(OnAWSEvents onAWSEvents, Context context) {
+    public AWSPubSubModule(OnAWSEvents onAWSEvents, Context context) {
         this.onAWSEvents = onAWSEvents;
         this.mContext = context;
     }
 
-    final String LOG_TAG = PubSubModule.class.getCanonicalName();
+    final String LOG_TAG = AWSPubSubModule.class.getCanonicalName();
     private Context mContext;
 
     private AWSIotClient mIotAndroidClient;
@@ -149,7 +144,7 @@ public class PubSubModule {
         mqttManager = new AWSIotMqttManager(clientId, Utils.getCUSTOMER_SPECIFIC_ENDPOINT());
         mqttManager.setKeepAlive(10);
         AWSIotMqttLastWillAndTestament lwt = new AWSIotMqttLastWillAndTestament("my/lwt/topic",
-                "Android client lost connection", AWSIotMqttQos.QOS0);
+                "Android connectMqttclient lost connection", AWSIotMqttQos.QOS0);
         mqttManager.setMqttLastWillAndTestament(lwt);
 
         // IoT Client (for creation of certificate if needed)

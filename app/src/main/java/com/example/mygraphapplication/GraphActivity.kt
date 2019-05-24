@@ -1,5 +1,6 @@
 package com.example.mygraphapplication
 
+import android.annotation.TargetApi
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -33,47 +34,46 @@ import com.example.mygraphapplication.Utils.Companion.launchPayload
 import com.example.mygraphapplication.Utils.Companion.lowPayload
 import com.example.mygraphapplication.Utils.Companion.notificationPayload
 import com.example.mygraphapplication.Utils.Companion.stopAlert
-import java.lang.Exception
 
 
-class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, PubSubModule.OnAWSEvents {
+class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, AWSPubSubModule.OnAWSEvents {
+
 
     override fun onClientConnected(status: String) {
         runOnUiThread {
             status_text.text = status
-            //Toast.makeText(this, status, Toast.LENGTH_LONG).show() }
         }
     }
 
     override fun onMessageReceived(message: String?) {
         runOnUiThread {
-            if (message!!.equals(alertPayload, true)) {
+            if (message.equals(alertPayload, true)) {
                 utils?.playAlertAlarm(this)
             }
 
-            if (message!!.equals(lowPayload, true)) {
+            if (message.equals(lowPayload, true)) {
                 utils?.playInfoAlarm(this)
             }
 
-            if (message!!.equals(notificationPayload, true)) {
-                createNotification("Alert notification", 123)
+            if (message.equals(notificationPayload, true)) {
+                if (!isNotificationVisible(123)) {
+                    createNotification("This is an alert notification", 123)
+                }
             }
 
-            if (message!!.equals(launchPayload, true)) {
-                subscribeAllTopics()
+            if (message.equals(launchPayload, true)) {
+                mqttClient?.subscribeAllTopics()
             }
-            if (message!!.equals(stopAlert, true)) {
+            if (message.equals(stopAlert, true)) {
                 utils?.stopMediaPlayer(this)
+                mqttClient?.unSubscribeAllTopics()
+                createNotification("Process stopped", 567)
             }
-
-
-            //  Toast.makeText(this, "Message " + message + "--" + utils, Toast.LENGTH_LONG).show()
         }
     }
 
     override fun onSubscribe() {
         runOnUiThread { Toast.makeText(this, "getInstance success ", Toast.LENGTH_LONG).show() }
-
     }
 
     private var mHealthChart: LineChart? = null
@@ -82,7 +82,7 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, PubSub
     private var mVibrationChart: LineChart? = null
 
     var mqttClient: MyMqttClient? = null
-    var pubSubActivity: PubSubModule? = null
+    var awsPubSubModule: AWSPubSubModule? = null
     var chartUtils: ChartUtils? = null
     var utils: Utils? = null
 
@@ -114,23 +114,18 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, PubSub
         when (item?.getItemId()) {
             R.id.action_settings_connect -> {
                 initMqttClient()
-                Handler().postDelayed({
-                    mqttClient?.subscribeAllTopics()
-                }, 2000)
+//                Handler().postDelayed({
+//                    mqttClient?.subscribeAllTopics()
+//                }, 2000)
 
                 return true
             }
             R.id.action_alexa_connect -> {
-                pubSubActivity?.connectMqtt()
+                awsPubSubModule?.connectMqtt()
                 return true
             }
             R.id.action_disconnect -> {
-                /*try {
-                    mqttClient?.mqttDisconnect()
-                    pubSubActivity?.disconnectConnection()
-                } catch (e: Exception) {
-                }*/
-
+                mqttClient?.unSubscribeAllTopics()
                 return true
             }
             else -> return super.onOptionsItemSelected(item)
@@ -139,10 +134,11 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, PubSub
 
     private fun initMqttClient() {
         mqttClient = MyMqttClient(this, this)
+        mqttClient?.connectMqttclient()
         //aws
-        pubSubActivity = PubSubModule(this, this)
-        pubSubActivity?.inception()
-        Handler().postDelayed({ pubSubActivity?.connectMqtt() }, 2000)
+        awsPubSubModule = AWSPubSubModule(this, this)
+        awsPubSubModule?.inception()
+        Handler().postDelayed({ awsPubSubModule?.connectMqtt() }, 2000)
     }
 
     private fun initCharts() {
@@ -214,7 +210,9 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, PubSub
     override fun onHealthDataReceived(value: Int) {
         if (value > 2) {
             mHealthChart?.setBorderColor(resources.getColor(R.color.redColor))
-            createNotification("Health Alert notification", 345)
+            if (!isNotificationVisible(345)) {
+                createNotification("Health Alert notification", 345)
+            }
         } else {
             mHealthChart?.setBorderColor(resources.getColor(R.color.greenColor))
         }
@@ -229,18 +227,13 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, PubSub
 
     }
 
-    fun subscribeAllTopics() {
-        mqttClient?.subsribeMessage(MyMqttClient.lightTopic)
-        mqttClient?.subsribeMessage(MyMqttClient.tempretureTopic)
-        mqttClient?.subsribeMessage(MyMqttClient.vibrationTopic)
-        mqttClient?.subsribeMessage(MyMqttClient.humidityTopic)
+    override fun onConnectionSuccess(status: Boolean) {
+       // mqttConnectionStatus.text = "Success Status is " + status
     }
 
-    fun unsubscribeAllTopics() {
-        mqttClient?.unsubscribeMessage(MyMqttClient.lightTopic)
-        mqttClient?.unsubscribeMessage(MyMqttClient.tempretureTopic)
-        mqttClient?.unsubscribeMessage(MyMqttClient.vibrationTopic)
-        mqttClient?.unsubscribeMessage(MyMqttClient.humidityTopic)
+    override fun onConnectionLost(message: String) {
+     //   mqttConnectionStatus.text = "Failure Message is " + message
+        Handler().postDelayed({ initMqttClient() }, 3000)
     }
 
 
@@ -249,7 +242,7 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, PubSub
         var builder = NotificationCompat.Builder(this, "12345")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setBadgeIconType(R.mipmap.ic_launcher)
-            .setContentTitle("Nissan")
+            .setContentTitle("Bosch")
             .setContentText("Bosch")
             .setStyle(
                 NotificationCompat.BigTextStyle()
@@ -264,7 +257,7 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, PubSub
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Nissan"
+            val name = "Bosch"
             val descriptionText = "Bosch"
             val importance = NotificationManager.IMPORTANCE_HIGH
             val channel = NotificationChannel("12345", name, importance).apply {
@@ -275,6 +268,19 @@ class GraphActivity : AppCompatActivity(), MyMqttClient.onMqttConnection, PubSub
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
         }
+    }
+
+
+    @TargetApi(Build.VERSION_CODES.M)
+    private fun isNotificationVisible(MY_ID: Int): Boolean {
+        val mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notifications = mNotificationManager.activeNotifications
+        for (notification in notifications) {
+            if (notification?.id == MY_ID) {
+                return true
+            }
+        }
+        return false
     }
 
 }

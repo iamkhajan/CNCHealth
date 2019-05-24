@@ -2,7 +2,6 @@ package com.example.mygraphapplication
 
 import android.content.Context
 import android.util.Log
-import android.widget.Toast
 import org.eclipse.paho.android.service.MqttAndroidClient
 import org.eclipse.paho.client.mqttv3.*
 import kotlin.math.absoluteValue
@@ -12,8 +11,8 @@ import org.eclipse.paho.client.mqttv3.IMqttActionListener
 
 class MyMqttClient(var mContext: Context, var mCallback: onMqttConnection) {
 
-    var client: MqttAndroidClient? = null
-    var callback: onMqttConnection? = null
+    var mqttClient: MqttAndroidClient? = null
+//    var callback: onMqttConnection? = null
 
     interface onMqttConnection {
         fun onTempDataReceived(value: Int)
@@ -22,41 +21,39 @@ class MyMqttClient(var mContext: Context, var mCallback: onMqttConnection) {
         fun onHealthDataReceived(value: Int)
         fun onAccelerometerTopicDataReceived(value: Int)
         fun onPressureTopicDataReceived(value: Int)
+
+        fun onConnectionSuccess(status: Boolean)
+        fun onConnectionLost(message: String)
     }
 
     companion object {
         val accelerometerTopic = "nissan/demo/accelerometer"
         val tempretureTopic = "nissan/demo/temperature"
         val humidityTopic = "nissan/demo/humidity"
-        val lightTopic = "nissan/demo/light"
         val healthTopic = "nissan/demo/health"
-        val vibrationTopic = "nissan/demo/vibration"
         val pressureTopic = "nissan/demo/pressure"
         val TAG = "MyMqttClient"
         val BROKER_URL = "tcp://broker.hivemq.com:1883"
     }
 
     init {
-        callback = mCallback
-        client()
+        connectMqttclient()
     }
 
     fun mqttDisconnect() {
         try {
-            var disconToken = client?.disconnect()
+            var disconToken = mqttClient?.disconnect()
             if (disconToken == null)
                 return
-            disconToken?.actionCallback = object : IMqttActionListener {
+            disconToken.actionCallback = object : IMqttActionListener {
                 override fun onSuccess(asyncActionToken: IMqttToken) {
                     // we are now successfully disconnected
-                    callback == null
                 }
 
                 override fun onFailure(
                     asyncActionToken: IMqttToken,
                     exception: Throwable
                 ) {
-                    // something went wrong, but probably we are disconnected anyway
                 }
             }
         } catch (e: MqttException) {
@@ -65,29 +62,24 @@ class MyMqttClient(var mContext: Context, var mCallback: onMqttConnection) {
 
     }
 
-    fun client() {
+    fun connectMqttclient() {
         val clientId = MqttClient.generateClientId()
-        client = MqttAndroidClient(
+        mqttClient = MqttAndroidClient(
             mContext, BROKER_URL,
             clientId
         )
         val options = MqttConnectOptions()
+        options.keepAliveInterval = 10
         options.mqttVersion = MqttConnectOptions.MQTT_VERSION_3_1
-        client?.setCallback(MqttCallbackHandler())
+        mqttClient?.setCallback(MqttCallbackHandler())
         try {
-            val token = client?.connect(options)
+            val token = mqttClient?.connect(options)
             token?.actionCallback = object : IMqttActionListener {
                 override fun onSuccess(asyncActionToken: IMqttToken) {
-                    subsribeMessage(accelerometerTopic)
-                    subsribeMessage(lightTopic)
-                    subsribeMessage(tempretureTopic)
-                    subsribeMessage(humidityTopic)
-                    subsribeMessage(pressureTopic)
-                    subsribeMessage(healthTopic)
+                    subscribeAllTopics()
                 }
 
                 override fun onFailure(asyncActionToken: IMqttToken, exception: Throwable) {
-                    print("onFailure")
 
                 }
             }
@@ -98,21 +90,36 @@ class MyMqttClient(var mContext: Context, var mCallback: onMqttConnection) {
 
     private fun publish(topic: String, payload: String) {
         val message = MqttMessage(payload.toByteArray())
-        client?.publish(topic, message)
+        mqttClient?.publish(topic, message)
     }
 
     fun subscribeAllTopics() {
-        subsribeMessage(lightTopic)
+        subsribeMessage(healthTopic)
         subsribeMessage(tempretureTopic)
-        subsribeMessage(vibrationTopic)
+        subsribeMessage(accelerometerTopic)
         subsribeMessage(humidityTopic)
+        subsribeMessage(tempretureTopic)
+    }
 
+    fun disconnectCNCMqtt() {
+        unSubscribeAllTopics()
+        //mqttDisconnect()
+        mqttClient = null
+    }
+
+
+    fun unSubscribeAllTopics() {
+        unsubscribeMessage(healthTopic)
+        unsubscribeMessage(tempretureTopic)
+        unsubscribeMessage(accelerometerTopic)
+        unsubscribeMessage(humidityTopic)
+        unsubscribeMessage(tempretureTopic)
     }
 
     fun subsribeMessage(topic: String) {
         val qos = 1
         try {
-            val subToken = client?.subscribe(topic, qos)
+            val subToken = mqttClient?.subscribe(topic, qos)
             if (subToken?.actionCallback == null) {
                 return
             }
@@ -137,7 +144,7 @@ class MyMqttClient(var mContext: Context, var mCallback: onMqttConnection) {
 
     fun unsubscribeMessage(topic: String) {
         try {
-            val unsubToken = client?.unsubscribe(topic)
+            val unsubToken = mqttClient?.unsubscribe(topic)
             if (unsubToken?.actionCallback == null) {
                 return
             }
@@ -161,21 +168,23 @@ class MyMqttClient(var mContext: Context, var mCallback: onMqttConnection) {
 
         override fun connectComplete(b: Boolean, s: String) {
             Log.d(TAG, "connectComplete: $s")
+            mCallback.onConnectionSuccess(b)
         }
 
         override fun connectionLost(throwable: Throwable) {
             Log.d(TAG, "connectionLost: ")
+            mCallback.onConnectionLost(throwable.message!!)
         }
 
         @Throws(Exception::class)
         override fun messageArrived(topic: String, mqttMessage: MqttMessage) {
 
             when (topic) {
-                tempretureTopic -> callback?.onTempDataReceived(mqttMessage.toString().toFloat().absoluteValue.toInt())
-                humidityTopic -> callback?.onHumidityDataReceived(mqttMessage.toString().toInt())
-                accelerometerTopic -> callback?.onAccelerometerTopicDataReceived(mqttMessage.toString().toInt())
-                pressureTopic -> callback?.onPressureTopicDataReceived(mqttMessage.toString().toInt())
-                healthTopic -> callback?.onHealthDataReceived(mqttMessage.toString().toInt())
+                tempretureTopic -> mCallback?.onTempDataReceived(mqttMessage.toString().toFloat().absoluteValue.toInt())
+                humidityTopic -> mCallback?.onHumidityDataReceived(mqttMessage.toString().toInt())
+                accelerometerTopic -> mCallback?.onAccelerometerTopicDataReceived(mqttMessage.toString().toInt())
+                pressureTopic -> mCallback?.onPressureTopicDataReceived(mqttMessage.toString().toInt())
+                healthTopic -> mCallback?.onHealthDataReceived(mqttMessage.toString().toInt())
             }
 
         }
